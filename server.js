@@ -1,16 +1,41 @@
 import express from "express";
 import cors from "cors";
-import { searchWikipedia } from "./modules/wikipedia.js";
+import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
 
-// Test endpoint – aby Render vedel, že server beží
+// -----------------------------
+// Wikipedia modul (priamo tu)
+// -----------------------------
+async function searchWikipedia(query) {
+  const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch=${encodeURIComponent(query)}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    return data.query.search.map(item => ({
+      source: "Wikipedia",
+      title: item.title,
+      snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, ""),
+      url: `https://en.wikipedia.org/?curid=${item.pageid}`
+    }));
+  } catch (err) {
+    return [{ source: "Wikipedia", error: "Chyba pri načítaní dát" }];
+  }
+}
+
+// -----------------------------
+// Test endpoint
+// -----------------------------
 app.get("/", (req, res) => {
   res.json({ status: "OK", message: "Backend beží" });
 });
 
-// Hlavný endpoint pre vyhľadávanie
+// -----------------------------
+// Hlavný SEARCH endpoint
+// -----------------------------
 app.get("/search", async (req, res) => {
   const q = req.query.q || "";
 
@@ -18,16 +43,17 @@ app.get("/search", async (req, res) => {
     return res.json({ error: "Missing query parameter ?q=" });
   }
 
-  // Zatiaľ len návrat testovacej odpovede
+  const wikiResults = await searchWikipedia(q);
+
   res.json({
     query: q,
-    results: [
-      { source: "backend", text: `Vyhľadávam: ${q}` }
-    ]
+    results: wikiResults
   });
 });
 
-// Render používa PORT z prostredia
+// -----------------------------
+// Štart servera
+// -----------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server beží na porte " + PORT);
