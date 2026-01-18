@@ -1,41 +1,20 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
+
+import {
+  searchWikipedia,
+  searchOpenStreetMap,
+  searchWikidata,
+  searchSlovakOpenData
+} from "./sources.js";
 
 const app = express();
 app.use(cors());
 
-// -----------------------------
-// Wikipedia modul (priamo tu)
-// -----------------------------
-async function searchWikipedia(query) {
-  const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch=${encodeURIComponent(query)}`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    return data.query.search.map(item => ({
-      source: "Wikipedia",
-      title: item.title,
-      snippet: item.snippet.replace(/<\/?[^>]+(>|$)/g, ""),
-      url: `https://en.wikipedia.org/?curid=${item.pageid}`
-    }));
-  } catch (err) {
-    return [{ source: "Wikipedia", error: "Chyba pri načítaní dát" }];
-  }
-}
-
-// -----------------------------
-// Test endpoint
-// -----------------------------
 app.get("/", (req, res) => {
-  res.json({ status: "OK", message: "Backend beží" });
+  res.json({ status: "OK" });
 });
 
-// -----------------------------
-// Hlavný SEARCH endpoint
-// -----------------------------
 app.get("/search", async (req, res) => {
   const q = req.query.q || "";
 
@@ -43,17 +22,17 @@ app.get("/search", async (req, res) => {
     return res.json({ error: "Missing query parameter ?q=" });
   }
 
-  const wikiResults = await searchWikipedia(q);
+  const wiki = await searchWikipedia(q);
+  const osm = await searchOpenStreetMap(q);
+  const wikidata = await searchWikidata(q);
+  const slovak = await searchSlovakOpenData(q);
 
   res.json({
     query: q,
-    results: wikiResults
+    results: [...wiki, ...osm, ...wikidata, ...slovak]
   });
 });
 
-// -----------------------------
-// Štart servera
-// -----------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server beží na porte " + PORT);
