@@ -3,9 +3,11 @@ import cors from "cors";
 
 import {
   searchWikipedia,
-  searchOpenStreetMap,
   searchWikidata,
-  searchSlovakOpenData
+  searchOpenStreetMap,
+  searchSlovakMunicipalities,
+  searchSlovakCompanies,
+  searchRSS
 } from "./sources.js";
 
 const app = express();
@@ -22,14 +24,33 @@ app.get("/search", async (req, res) => {
     return res.json({ error: "Missing query parameter ?q=" });
   }
 
-  const wiki = await searchWikipedia(q);
-  const osm = await searchOpenStreetMap(q);
-  const wikidata = await searchWikidata(q);
-  const slovak = await searchSlovakOpenData(q);
+  // Volanie všetkých zdrojov paralelne
+  const [
+    wiki,
+    wikidata,
+    osm,
+    obce,
+    firmy,
+    rss
+  ] = await Promise.all([
+    searchWikipedia(q),
+    searchWikidata(q),
+    searchOpenStreetMap(q),
+    searchSlovakMunicipalities(q),
+    searchSlovakCompanies(q),
+    searchRSS(q)
+  ]);
 
   res.json({
     query: q,
-    results: [...wiki, ...osm, ...wikidata, ...slovak]
+    results: [
+      ...wiki,
+      ...wikidata,
+      ...osm,
+      ...obce,
+      ...firmy,
+      ...rss
+    ]
   });
 });
 
