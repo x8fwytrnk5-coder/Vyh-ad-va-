@@ -1,110 +1,678 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vyhľadávač</title>
+  <meta charset="UTF-8" />
+  <title>Rešerš informácií</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
+    :root {
+      --bg-main: #071524;
+      --bg-panel: rgba(5, 12, 22, 0.9);
+      --accent: #4fd1c5;
+      --accent-soft: #2c7a7b;
+      --text-main: #f7fafc;
+      --text-muted: #a0aec0;
+      --border-soft: #2d3748;
+      --input-bg: #0f1724;
+      --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.55);
+      --radius-lg: 18px;
+      --radius-md: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
     body {
-      background: #0d0d0d;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    #searchBox {
-      width: 100%;
-      padding: 15px;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-      margin-bottom: 20px;
-    }
-
-    #results {
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #12263f 0, #050b14 45%, #02040a 100%);
+      color: var(--text-main);
       display: flex;
-      flex-direction: column;
-      gap: 15px;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
     }
 
-    .item {
-      background: #1a1a1a;
-      padding: 15px;
-      border-radius: 8px;
-      border-left: 4px solid #4da6ff;
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      overflow: hidden;
     }
 
-    .item h3 {
-      margin: 0 0 5px 0;
-      color: #4da6ff;
-    }
-
-    .item p {
-      margin: 0;
+    .bg-layer::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background-image:
+        radial-gradient(circle at 10% 0%, rgba(79, 209, 197, 0.18) 0, transparent 55%),
+        radial-gradient(circle at 90% 0%, rgba(129, 230, 217, 0.12) 0, transparent 55%),
+        radial-gradient(circle at 50% 100%, rgba(56, 178, 172, 0.16) 0, transparent 60%);
       opacity: 0.9;
     }
 
-    .source {
+    .bg-text {
+      position: absolute;
+      inset: 0;
+      color: rgba(148, 163, 184, 0.18);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .bg-text span {
+      display: inline-block;
+      margin: 0 18px;
+    }
+
+    .icon-book,
+    .icon-search {
+      position: fixed;
+      top: 18px;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: radial-gradient(circle at 30% 0%, rgba(79, 209, 197, 0.35), rgba(15, 23, 42, 0.95));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(10px);
+      color: var(--accent);
+      z-index: 10;
+    }
+
+    .icon-book { left: 18px; }
+    .icon-search { right: 18px; cursor: pointer; }
+
+    .icon-book svg,
+    .icon-search svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1120px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+      gap: 26px;
+    }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: var(--shadow-soft);
+      padding: 22px 24px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(79, 209, 197, 0.12), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .panel-header { margin-bottom: 18px; }
+    .panel-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #e2e8f0;
+    }
+
+    .panel-subtitle {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(79, 209, 197, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--accent);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-top: 10px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(79, 209, 197, 0.9);
+    }
+
+    .form-grid { margin-top: 10px; display: grid; gap: 14px; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field-label {
       font-size: 12px;
-      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+    }
+
+    .field-label span { color: var(--accent); }
+
+    .field-input,
+    .field-select {
+      width: 100%;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: var(--input-bg);
+      color: var(--text-main);
+      padding: 9px 11px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .field-input:focus,
+    .field-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(79, 209, 197, 0.4);
+      background: #111827;
+    }
+
+    .field-inline {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+      color: #0b1120;
+      box-shadow: 0 12px 30px rgba(15, 118, 110, 0.6);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(15, 118, 110, 0.8);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .results-panel { position: relative; }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .results-title {
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e2e8f0;
+    }
+
+    .results-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .results-list {
       margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 380px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .result-item {
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+      padding: 10px 11px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+
+    .result-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    .result-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .result-snippet {
+      font-size: 12px;
+      color: #cbd5f5;
+      margin-top: 2px;
+    }
+
+    .result-keywords {
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 2px;
+    }
+
+    .pill {
+      padding: 1px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .empty-state {
+      margin-top: 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 18px 10px;
+      border-radius: 12px;
+      border: 1px dashed rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.7);
     }
   </style>
 </head>
 <body>
+  <div class="bg-layer">
+    <div class="bg-text">
+      <span>INFORMATION</span>
+      <span>KNOWLEDGE</span>
+      <span>DATA</span>
+      <span>FACTS</span>
+      <span>CONTEXT</span>
+      <span>SOURCES</span>
+    </div>
+  </div>
 
-  <h1>Vyhľadávač</h1>
+  <!-- Ikona otvorenej knihy vľavo hore -->
+  <div class="icon-book" title="Rešerš – domov">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 4.5C6.8 4 8.6 4 10.5 4.5C12 4.9 13.5 4.9 15 4.5C16.9 4 18.7 4 20.5 4.5V18.5C18.7 18 16.9 18 15 18.5C13.5 18.9 12 18.9 10.5 18.5C8.6 18 6.8 18 5 18.5V4.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M10.5 4.5V18.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+  </div>
 
-  <input id="searchBox" type="text" placeholder="Zadaj hľadaný výraz…">
+  <!-- Ikona lupy vpravo hore -->
+  <div class="icon-search" title="Nové hľadanie" id="resetIcon">
+    <svg viewBox="0 0 24 24" fill="none">
+      <circle cx="11" cy="11" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M15 15L19 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+  </div>
 
-  <div id="results"></div>
+  <main class="shell">
+    <!-- Panel: Parametre rešerše -->
+    <section class="panel">
+      <header class="panel-header">
+        <div class="panel-title">Rešerš informácií</div>
+        <div class="panel-subtitle">
+          Zadajte parametre vyhľadávania vo verejne dostupných zdrojoch.
+        </div>
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span>Režim: verejné zdroje</span>
+        </div>
+      </header>
 
-  <script>
-    const API = "https://vyh-ad-va.onrender.com/search?q=";
+      <form class="form-grid" id="searchForm">
+        <!-- 1. Predmet hľadania -->
+        <div class="field">
+          <label class="field-label">1. Predmet hľadania <span>*</span></label>
+          <input
+            type="text"
+            class="field-input"
+            placeholder="Napr. NATO, Ukrajina, sankcie, energetická politika..."
+            name="query"
+            id="queryInput"
+            required
+          />
+          <div class="hint">
+            Podporované: viac slov, frázy v úvodzovkách, vylúčenie slov pomocou „-slovo“.
+          </div>
+        </div>
 
-    const searchBox = document.getElementById("searchBox");
-    const results = document.getElementById("results");
-
-    searchBox.addEventListener("input", async () => {
-      const q = searchBox.value.trim();
-      if (!q) {
-        results.innerHTML = "";
-        return;
-      }
-
-      results.innerHTML = "<p>Načítavam…</p>";
-
-      try {
-        const res = await fetch(API + encodeURIComponent(q));
-        const data = await res.json();
-
-        if (!data.results || data.results.length === 0) {
-          results.innerHTML = "<p>Žiadne výsledky.</p>";
-          return;
-        }
-
-        results.innerHTML = data.results
-          .map(item => `
-            <div class="item">
-              <h3>${item.title || "Bez názvu"}</h3>
-              <p>${item.description || ""}</p>
-              <div class="source">${item.source}</div>
+        <!-- 2. Rozsah hľadania – časový -->
+        <div class="field">
+          <label class="field-label">2. Časový rozsah</label>
+          <div class="field-inline">
+            <div>
+              <input type="date" class="field-input" name="dateFrom" id="dateFrom" />
+              <div class="hint">Od</div>
             </div>
-          `)
-          .join("");
+            <div>
+              <input type="date" class="field-input" name="dateTo" id="dateTo" />
+              <div class="hint">Do</div>
+            </div>
+          </div>
+        </div>
 
-      } catch (err) {
-        results.innerHTML = "<p>Chyba pri načítaní dát.</p>";
-      }
+        <!-- 3. Rozsah hľadania – kde -->
+        <div class="field">
+          <label class="field-label">3. Geografický rozsah</label>
+          <select class="field-select" name="region" id="regionSelect">
+            <option value="world">Svet</option>
+            <option value="eu">Európska únia</option>
+            <option value="sk">Slovenská republika</option>
+            <option value="custom">Vlastný výber (mock)</option>
+          </select>
+          <div class="hint">
+            V základnej verzii ide o logický filter podľa zdroja / jazyka.
+          </div>
+        </div>
+
+        <!-- 4. Jazyk hľadania -->
+        <div class="field">
+          <label class="field-label">4. Jazyk hľadania</label>
+          <select class="field-select" name="language" id="languageSelect">
+            <option value="all">Všetky jazyky</option>
+            <option value="sk">Slovenský</option>
+            <option value="cs">Český</option>
+            <option value="en">Anglický</option>
+            <option value="de">Nemecký</option>
+            <option value="pl">Poľský</option>
+            <option value="hu">Maďarský</option>
+          </select>
+          <div class="hint">
+            V ďalšej fáze môžeš pridať multi-select a jemnejšie jazykové filtre.
+          </div>
+        </div>
+
+        <!-- TLAČIDLÁ – TOTO JE TO, ČO TI CHÝBALO -->
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" id="clearButton">
+            Vyčistiť parametre
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Spustiť rešerš
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Panel: Výsledky -->
+    <section class="panel results-panel">
+      <div class="results-header">
+        <div class="results-title">Výsledky rešerše</div>
+        <div class="results-meta" id="resultsMeta">
+          Zatiaľ zobrazené: 0 záznamov
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        Po spustení rešerše sa tu zobrazia nájdené články, zdroje a úryvky textu
+        s vyznačenými kľúčovými slovami.
+      </div>
+
+      <div class="results-list" id="resultsList"></div>
+    </section>
+  </main>
+<script>
+  // Mock dáta – len na testovanie UI bez servera
+  const MOCK_ARTICLES = [
+    {
+      title: "NATO rokovalo o ďalšom postupe voči Rusku",
+      source: "Príklad News",
+      date: "2026-01-17",
+      language: "sk",
+      region: "eu",
+      content:
+        "Aliancia NATO sa zhodla na potrebe prehodnotiť sankcie voči Rusku v súvislosti s vývojom konfliktu na Ukrajine.",
+    },
+    {
+      title: "Energy policy and sanctions in the EU",
+      source: "European Policy Review",
+      date: "2025-11-02",
+      language: "en",
+      region: "eu",
+      content:
+        "The European Union is reassessing its energy dependence and sanction mechanisms after recent geopolitical tensions.",
+    },
+    {
+      title: "Slovenská vláda diskutuje o obranných výdavkoch",
+      source: "Denník SK",
+      date: "2026-01-10",
+      language: "sk",
+      region: "sk",
+      content:
+        "Vláda SR rokuje o zvýšení obranných výdavkov v súvislosti s požiadavkami NATO a regionálnou bezpečnosťou.",
+    },
+    {
+      title: "Global security challenges in 21st century",
+      source: "World Analysis",
+      date: "2024-09-21",
+      language: "en",
+      region: "world",
+      content:
+        "From cyber threats to conventional conflicts, global security is facing complex, multi-layered challenges.",
+    },
+    {
+      title: "Sankcie a ich dopad na ekonomiku",
+      source: "Ekonomický týždenník",
+      date: "2025-03-14",
+      language: "sk",
+      region: "eu",
+      content:
+        "Sankcie voči rôznym krajinám majú dlhodobý dopad na obchodné vzťahy, energetiku a finančné trhy.",
+    },
+  ];
+
+  const searchForm = document.getElementById("searchForm");
+  const resultsList = document.getElementById("resultsList");
+  const resultsMeta = document.getElementById("resultsMeta");
+  const emptyState = document.getElementById("emptyState");
+  const clearButton = document.getElementById("clearButton");
+  const resetIcon = document.getElementById("resetIcon");
+
+  const queryInput = document.getElementById("queryInput");
+  const dateFromInput = document.getElementById("dateFrom");
+  const dateToInput = document.getElementById("dateTo");
+  const regionSelect = document.getElementById("regionSelect");
+  const languageSelect = document.getElementById("languageSelect");
+
+  // Normalizácia textu (odstránenie diakritiky)
+  function normalize(text) {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function clearResults() {
+    resultsList.innerHTML = "";
+    resultsMeta.textContent = "Zatiaľ zobrazené: 0 záznamov";
+    emptyState.style.display = "block";
+  }
+
+  function clearForm() {
+    searchForm.reset();
+    clearResults();
+  }
+
+  function highlightKeywords(text, keywords) {
+    if (!keywords.length) return text;
+
+    let result = text;
+
+    keywords.forEach((k) => {
+      if (!k) return;
+      const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp("(" + escaped + ")", "gi");
+      result = result.replace(regex, "<mark>$1</mark>");
     });
-  </script>
+
+    return result;
+  }
+
+  function handleSearch(event) {
+    event.preventDefault();
+
+    const rawQuery = queryInput.value.trim();
+    if (!rawQuery) {
+      clearResults();
+      resultsMeta.textContent = "Zadajte predmet hľadania.";
+      return;
+    }
+
+    const dateFrom = dateFromInput.value || null;
+    const dateTo = dateToInput.value || null;
+    const region = regionSelect.value;
+    const language = languageSelect.value;
+
+    // rozbitie dotazu na slová
+    const keywords = rawQuery
+      .split(/\s+/)
+      .filter((w) => !!w && !w.startsWith("-"))
+      .map((w) => normalize(w));
+
+    const excluded = rawQuery
+      .split(/\s+/)
+      .filter((w) => w.startsWith("-"))
+      .map((w) => normalize(w.slice(1)));
+
+    async function handleSearch(event) {
+  event.preventDefault();
+
+  const rawQuery = queryInput.value.trim();
+  if (!rawQuery) {
+    clearResults();
+    resultsMeta.textContent = "Zadajte predmet hľadania.";
+    return;
+  }
+
+  // Backend endpoint
+  const API = "https://vyh-ad-va.onrender.com/search?q=" + encodeURIComponent(rawQuery);
+
+  // Vymažeme staré výsledky
+  resultsList.innerHTML = "";
+  emptyState.style.display = "none";
+  resultsMeta.textContent = "Načítavam výsledky...";
+
+  try {
+    const response = await fetch(API);
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      clearResults();
+      resultsMeta.textContent = "Nenašli sa žiadne záznamy.";
+      return;
+    }
+
+    // Render výsledkov
+    data.results.forEach((item) => {
+      const article = document.createElement("article");
+      article.className = "result-item";
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "result-title";
+      titleEl.textContent = item.title || "Bez názvu";
+
+      const metaEl = document.createElement("div");
+      metaEl.className = "result-meta";
+      metaEl.innerHTML = `
+        <span class="pill">${item.source || "Neznámy zdroj"}</span>
+      `;
+
+      const snippetEl = document.createElement("div");
+      snippetEl.className = "result-snippet";
+      snippetEl.textContent = item.description || "";
+
+      article.appendChild(titleEl);
+      article.appendChild(metaEl);
+      article.appendChild(snippetEl);
+
+      resultsList.appendChild(article);
+    });
+
+    resultsMeta.textContent = `Zobrazené: ${data.results.length} záznamov`;
+
+  } catch (err) {
+    clearResults();
+    resultsMeta.textContent = "Chyba pri načítaní dát zo servera.";
+  }
+}
+
+
+  searchForm.addEventListener("submit", handleSearch);
+  clearButton.addEventListener("click", clearForm);
+  resetIcon.addEventListener("click", clearForm);
+</script>
 
 </body>
 </html>
