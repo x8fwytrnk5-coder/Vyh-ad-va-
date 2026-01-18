@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vyhľadávač</title>
+  <style>
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #searchBox {
+      width: 100%;
+      padding: 15px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      margin-bottom: 20px;
+    }
+
+    #results {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .item {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #4da6ff;
+    }
+
+    .item h3 {
+      margin: 0 0 5px 0;
+      color: #4da6ff;
+    }
+
+    .item p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .source {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Vyhľadávač</h1>
+
+  <input id="searchBox" type="text" placeholder="Zadaj hľadaný výraz…">
+
+  <div id="results"></div>
+
+  <script>
+    const API = "https://vyh-ad-va.onrender.com/search?q=";
+
+    const searchBox = document.getElementById("searchBox");
+    const results = document.getElementById("results");
+
+    searchBox.addEventListener("input", async () => {
+      const q = searchBox.value.trim();
+      if (!q) {
+        results.innerHTML = "";
+        return;
+      }
+
+      results.innerHTML = "<p>Načítavam…</p>";
+
+      try {
+        const res = await fetch(API + encodeURIComponent(q));
+        const data = await res.json();
+
+        if (!data.results || data.results.length === 0) {
+          results.innerHTML = "<p>Žiadne výsledky.</p>";
+          return;
+        }
+
+        results.innerHTML = data.results
+          .map(item => `
+            <div class="item">
+              <h3>${item.title || "Bez názvu"}</h3>
+              <p>${item.description || ""}</p>
+              <div class="source">${item.source}</div>
+            </div>
+          `)
+          .join("");
+
+      } catch (err) {
+        results.innerHTML = "<p>Chyba pri načítaní dát.</p>";
+      }
+    });
+  </script>
+
+</body>
+</html>
