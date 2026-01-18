@@ -1,5 +1,5 @@
 {
-  "name": "info-search-backend",
+  "name": "vyh-ad-va-backend",
   "version": "1.0.0",
   "type": "module",
   "main": "server.js",
